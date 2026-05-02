@@ -1,147 +1,299 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { consultarGemini, MensajeGemini } from '@/lib/gemini'
 
-interface Msg { id: string; role: 'user' | 'assistant'; content: string }
-
-const BIENVENIDA: Msg = {
-  id: '0', role: 'assistant',
-  content: 'Hola, soy el asistente clínico de MediCore IPS. Puedo ayudarte con consultas clínicas, normativa colombiana, gestión biomédica y más. ¿En qué te puedo ayudar hoy?',
+interface Mensaje {
+  id: string
+  rol: 'usuario' | 'asistente'
+  contenido: string
+  hora: string
+  error?: boolean
 }
 
-const CONSULTAS: Record<string, string[]> = {
-  'Clínico': [
-    '¿Protocolo para HTA grado 2?',
-    'Interacciones: Losartán + Amlodipino',
-    'Criterios diagnósticos diabetes tipo 2',
-    'Dosis pediátrica amoxicilina 500mg',
+const CONSULTAS_RAPIDAS: Record<string, string[]> = {
+  '🩺 Clínico': [
+    '¿Cuál es el protocolo de manejo para HTA grado 2 en adultos?',
+    '¿Hay interacciones entre Losartán 100mg y Amlodipino 5mg?',
+    '¿Cuáles son los criterios diagnósticos para Diabetes tipo 2?',
+    '¿Cuál es la dosis pediátrica de Amoxicilina para faringoamigdalitis?',
+    '¿Cuándo se indica hospitalización por neumonía?',
   ],
-  'Normativa colombiana': [
-    '¿Qué exige Res. 3100/2019 sobre HCs?',
-    'Plazos de envío RIPS (Res. 2275/2023)',
-    'Requisitos habilitación IPS (Res. 3100)',
-    'Custodia de historias clínicas',
+  '📋 Normativa': [
+    '¿Qué exige la Resolución 3100/2019 sobre historia clínica?',
+    '¿Cuáles son los plazos de envío de RIPS según Res. 2275/2023?',
+    '¿Cuántos años debe custodiarse una historia clínica?',
+    '¿Qué dice la Ley 1581/2012 sobre datos de pacientes?',
+    '¿Qué debe tener una factura electrónica en salud?',
   ],
-  'Biomédico': [
-    '¿Cuándo reportar a INVIMA? (Decreto 4725)',
-    'Clasificación de riesgo dispositivos médicos',
-    'Frecuencia calibración equipos Clase III',
-    '¿Qué es tecnovigilancia?',
+  '🔬 Biomédico': [
+    '¿Cuándo reportar un evento adverso al INVIMA? (Decreto 4725)',
+    '¿Cómo se clasifican los dispositivos médicos en Colombia?',
+    '¿Con qué frecuencia calibrar un desfibrilador Clase III?',
+    '¿Qué es tecnovigilancia y obligaciones de una IPS?',
+    '¿Qué documentos debe tener la hoja de vida de un equipo?',
   ],
-  'Gestión': [
-    'Genera resumen ejecutivo del día',
-    '¿Cómo reducir glosas en facturación?',
-    'Indicadores SOGCS obligatorios para IPS',
+  '📊 Gestión': [
+    '¿Cuáles son los indicadores SOGCS obligatorios para una IPS?',
+    '¿Cómo reducir el índice de glosas en facturación a EPS?',
+    '¿Qué diferencia hay entre telemedicina y teleconsulta?',
+    'Explícame el Sistema de Garantía de Calidad SOGCS',
   ],
 }
 
-export default function IaPage() {
-  const [mensajes, setMensajes] = useState<Msg[]>([BIENVENIDA])
+function getHora(): string {
+  return new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+}
+
+export default function IAPage() {
+  const [montado, setMontado] = useState(false)
+  const [mensajes, setMensajes] = useState<Mensaje[]>([
+    {
+      id: '1',
+      rol: 'asistente',
+      contenido: '¡Hola! Soy el asistente clínico de MediCore IPS, impulsado por Google Gemini.\n\nPuedo ayudarte con:\n• Protocolos clínicos y farmacología\n• Normativa colombiana de salud\n• Gestión biomédica y tecnovigilancia\n• Indicadores de calidad SOGCS\n\n¿En qué te ayudo?',
+      hora: '',
+    },
+  ])
   const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [noKey, setNoKey] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [cargando, setCargando] = useState(false)
+  const [grupoAbierto, setGrupoAbierto] = useState<string>('🩺 Clínico')
+  const [apiKeyOk, setApiKeyOk] = useState(false)
+  const mensajesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [mensajes, loading])
+  useEffect(() => {
+    setMontado(true)
+    const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY
+    setApiKeyOk(!!key && !key.includes('PON-TU-KEY') && key.length > 10)
+  }, [])
 
-  const enviar = async (texto?: string) => {
-    const pregunta = (texto ?? input).trim()
-    if (!pregunta || loading) return
+  useEffect(() => {
+    mensajesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [mensajes, cargando])
+
+  const construirHistorial = (): MensajeGemini[] => {
+    return mensajes
+      .filter(m => m.id !== '1' && !m.error)
+      .slice(-8)
+      .map(m => ({
+        role: m.rol === 'usuario' ? 'user' : 'model',
+        parts: [{ text: m.contenido }],
+      }))
+  }
+
+  const enviarMensaje = async (texto?: string) => {
+    const contenido = (texto || input).trim()
+    if (!contenido || cargando) return
+
+    const hora = getHora()
+
+    const msgUsuario: Mensaje = {
+      id: Date.now().toString(),
+      rol: 'usuario',
+      contenido,
+      hora,
+    }
+
+    setMensajes(prev => [...prev, msgUsuario])
     setInput('')
-    const uid = Date.now().toString()
-    setMensajes(prev => [...prev, { id: uid, role: 'user', content: pregunta }])
-    setLoading(true)
+    setCargando(true)
+
     try {
-      const res = await fetch('/api/ia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: pregunta }) })
-      if (res.status === 503) {
-        setNoKey(true)
-        setMensajes(prev => [...prev, { id: uid + '_r', role: 'assistant', content: '⚠️ API key no configurada. Agrega tu ANTHROPIC_API_KEY en .env.local para activar la IA clínica.' }])
-      } else {
-        const data = await res.json()
-        setMensajes(prev => [...prev, { id: uid + '_r', role: 'assistant', content: data.reply ?? 'Sin respuesta' }])
-      }
-    } catch {
-      setMensajes(prev => [...prev, { id: uid + '_r', role: 'assistant', content: 'Error de conexión. Verifica que el servidor esté activo.' }])
+      const historial = construirHistorial()
+      const respuesta = await consultarGemini(contenido, historial)
+      setMensajes(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        rol: 'asistente',
+        contenido: respuesta,
+        hora: getHora(),
+      }])
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Error desconocido'
+      setMensajes(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        rol: 'asistente',
+        contenido: `⚠️ ${errorMsg}`,
+        hora: getHora(),
+        error: true,
+      }])
     } finally {
-      setLoading(false)
+      setCargando(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      enviarMensaje()
+    }
+  }
+
+  const limpiarChat = () => {
+    setMensajes([{
+      id: '1',
+      rol: 'asistente',
+      contenido: 'Chat reiniciado. ¿En qué te puedo ayudar?',
+      hora: '',
+    }])
+  }
+
+  const formatearTexto = (texto: string) => {
+    return texto.split('\n').map((linea, i, arr) => {
+      const partes = linea.split(/\*\*(.*?)\*\*/g)
+      const lineaFormateada = partes.map((parte, j) =>
+        j % 2 === 1 ? <strong key={j}>{parte}</strong> : parte
+      )
+      return (
+        <span key={i}>
+          {lineaFormateada}
+          {i < arr.length - 1 && <br />}
+        </span>
+      )
+    })
+  }
+
+  if (!montado) return null
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px - 48px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 105px)' }}>
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexShrink: 0 }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A2E', marginBottom: '4px' }}>🤖 IA Clínica MediCore</h1>
-          <p style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'monospace' }}>Claude Sonnet · Asistente clínico con IA</p>
+          <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A2E', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            🤖 IA Clínica MediCore
+            {apiKeyOk ? (
+              <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#F0FDF4', color: '#16A34A', border: '1px solid #bbf7d0' }}>
+                ● Activa — Gemini Flash
+              </span>
+            ) : (
+              <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#FFFBEB', color: '#D97706', border: '1px solid #fde68a' }}>
+                ⚠️ Configura API Key
+              </span>
+            )}
+          </h1>
+          <p style={{ fontSize: '12px', color: '#9CA3AF', fontFamily: 'monospace' }}>
+            Google Gemini 2.0 Flash · Normativa colombiana · Gestión biomédica
+          </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: noKey ? '#FFFBEB' : '#F0FDF4', border: `1px solid ${noKey ? '#fde68a' : '#bbf7d0'}`, borderRadius: '20px', padding: '4px 12px' }}>
-          <span style={{ width: '6px', height: '6px', background: noKey ? '#D97706' : '#16A34A', borderRadius: '50%', display: 'inline-block' }} />
-          <span style={{ fontSize: '11px', color: noKey ? '#D97706' : '#16A34A', fontWeight: '600' }}>{noKey ? 'Sin configurar' : 'Activa'}</span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
+            style={{ padding: '7px 12px', background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '7px', fontSize: '11px', color: '#5F6B7A', textDecoration: 'none' }}>
+            🔑 Obtener API Key gratis
+          </a>
+          <button onClick={limpiarChat}
+            style={{ padding: '7px 12px', background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '7px', fontSize: '12px', color: '#5F6B7A', cursor: 'pointer', fontFamily: 'inherit' }}>
+            🗑️ Limpiar
+          </button>
         </div>
       </div>
 
-      {noKey && (
-        <div style={{ background: '#FFFBEB', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 16px', marginBottom: '12px', fontSize: '12px', color: '#D97706', flexShrink: 0 }}>
-          ⚠️ Configura tu <code style={{ fontFamily: 'monospace', background: '#fef3c7', padding: '1px 5px', borderRadius: '3px' }}>ANTHROPIC_API_KEY</code> en <code style={{ fontFamily: 'monospace', background: '#fef3c7', padding: '1px 5px', borderRadius: '3px' }}>.env.local</code> para activar la IA clínica
+      {/* Banner sin API key */}
+      {!apiKeyOk && (
+        <div style={{ background: '#FFFBEB', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 16px', marginBottom: '14px', flexShrink: 0 }}>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: '#D97706', marginBottom: '4px' }}>⚠️ API Key de Gemini no configurada</div>
+          <div style={{ fontSize: '12px', color: '#92400E', lineHeight: '1.6' }}>
+            1. Ve a <strong>aistudio.google.com</strong> → Get API Key → Create API key<br />
+            2. Edita <code style={{ background: '#fef3c7', padding: '1px 4px', borderRadius: '3px' }}>.env.local</code> y agrega: <code style={{ background: '#fef3c7', padding: '1px 4px', borderRadius: '3px' }}>NEXT_PUBLIC_GEMINI_API_KEY=AIza...</code><br />
+            3. Reinicia con <code style={{ background: '#fef3c7', padding: '1px 4px', borderRadius: '3px' }}>npm run dev</code>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '16px', flex: 1, minHeight: 0 }}>
-        {/* Chat */}
-        <div style={{ background: '#fff', border: '1px solid #E8ECF0', borderRadius: '10px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Mensajes */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {mensajes.map(m => (
-              <div key={m.id} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-start', gap: '8px' }}>
-                {m.role === 'assistant' && <div style={{ fontSize: '20px', flexShrink: 0, marginTop: '2px' }}>🤖</div>}
-                <div style={{ maxWidth: '75%', background: m.role === 'user' ? '#FFF5F3' : '#F5F7FA', border: `1px solid ${m.role === 'user' ? '#ffd5cc' : '#E8ECF0'}`, borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '2px 12px 12px 12px', padding: '10px 14px', fontSize: '13px', color: '#1A1A2E', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-                  {m.content}
+      {/* Layout */}
+      <div style={{ display: 'flex', gap: '16px', flex: 1, minHeight: 0 }}>
+
+        {/* CHAT */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', border: '1px solid #E8ECF0', borderRadius: '10px', overflow: 'hidden', minHeight: 0 }}>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {mensajes.map(msg => (
+              <div key={msg.id} style={{ display: 'flex', gap: '10px', flexDirection: msg.rol === 'usuario' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: msg.rol === 'usuario' ? '#FFF5F3' : '#F0FDF4', border: `1px solid ${msg.rol === 'usuario' ? '#ffd5cc' : '#bbf7d0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                  {msg.rol === 'usuario' ? '👤' : '✨'}
                 </div>
-                {m.role === 'user' && <div style={{ fontSize: '20px', flexShrink: 0, marginTop: '2px' }}>👤</div>}
+                <div style={{ maxWidth: '76%', padding: '12px 15px', borderRadius: msg.rol === 'usuario' ? '14px 3px 14px 14px' : '3px 14px 14px 14px', background: msg.rol === 'usuario' ? '#FFF5F3' : msg.error ? '#FEF2F2' : '#F8FFFE', border: `1px solid ${msg.rol === 'usuario' ? '#ffd5cc' : msg.error ? '#fecaca' : '#d1fae5'}`, fontSize: '13px', lineHeight: '1.75', color: '#1A1A2E' }}>
+                  {formatearTexto(msg.contenido)}
+                  {msg.hora && (
+                    <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '6px', fontFamily: 'monospace' }}>
+                      {msg.rol === 'asistente' && !msg.error && '✨ Gemini · '}{msg.hora}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
-            {loading && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <div style={{ fontSize: '20px' }}>🤖</div>
-                <div style={{ background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '2px 12px 12px 12px', padding: '10px 14px', fontSize: '13px', color: '#9CA3AF' }}>
-                  Escribiendo...
+
+            {cargando && (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0FDF4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>✨</div>
+                <div style={{ padding: '14px 18px', background: '#F8FFFE', border: '1px solid #d1fae5', borderRadius: '3px 14px 14px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Gemini está pensando...</span>
                 </div>
               </div>
             )}
-            <div ref={bottomRef} />
+            <div ref={mensajesEndRef} />
           </div>
 
-          {/* Input */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid #E8ECF0', display: 'flex', gap: '8px' }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid #E8ECF0', display: 'flex', gap: '10px', alignItems: 'flex-end', flexShrink: 0 }}>
             <textarea
+              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-              placeholder="Escribe tu consulta clínica... (Enter para enviar, Shift+Enter para nueva línea)"
-              style={{ flex: 1, padding: '10px 12px', border: '1.5px solid #E8ECF0', borderRadius: '8px', fontSize: '13px', resize: 'none', height: '60px', fontFamily: 'inherit', outline: 'none' }}
+              onKeyDown={handleKeyDown}
+              placeholder="Escribe tu consulta clínica... (Enter para enviar, Shift+Enter nueva línea)"
+              disabled={cargando}
+              rows={2}
+              style={{ flex: 1, padding: '10px 12px', border: '1.5px solid #E8ECF0', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: '1.5', color: '#1A1A2E' }}
+              onFocus={e => e.target.style.borderColor = '#C74634'}
+              onBlur={e => e.target.style.borderColor = '#E8ECF0'}
             />
-            <button onClick={() => enviar()} disabled={loading || !input.trim()}
-              style={{ padding: '10px 18px', background: loading || !input.trim() ? '#9CA3AF' : '#C74634', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-              Enviar
+            <button
+              onClick={() => enviarMensaje()}
+              disabled={cargando || !input.trim()}
+              style={{ padding: '10px 20px', background: cargando || !input.trim() ? '#E8ECF0' : '#C74634', color: cargando || !input.trim() ? '#9CA3AF' : '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: cargando || !input.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0, height: '44px' }}>
+              {cargando ? '⏳' : 'Enviar'}
             </button>
           </div>
         </div>
 
-        {/* Panel de consultas rápidas */}
-        <div style={{ background: '#fff', border: '1px solid #E8ECF0', borderRadius: '10px', overflow: 'auto', padding: '16px' }}>
-          <div style={{ fontSize: '12px', fontWeight: '700', color: '#1A1A2E', marginBottom: '14px' }}>⚡ Consultas rápidas</div>
-          {Object.entries(CONSULTAS).map(([grupo, preguntas]) => (
-            <div key={grupo} style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>{grupo}</div>
-              {preguntas.map(q => (
-                <button key={q} onClick={() => enviar(q)} disabled={loading}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '6px', fontSize: '11px', color: '#5F6B7A', cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '4px', fontFamily: 'inherit', lineHeight: '1.4' }}>
-                  {q}
-                </button>
-              ))}
+        {/* PANEL DERECHO */}
+        <div style={{ width: '270px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#5F6B7A', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>
+            ⚡ Consultas rápidas
+          </div>
+
+          {Object.entries(CONSULTAS_RAPIDAS).map(([grupo, preguntas]) => (
+            <div key={grupo} style={{ background: '#fff', border: '1px solid #E8ECF0', borderRadius: '8px', overflow: 'hidden' }}>
+              <button onClick={() => setGrupoAbierto(grupoAbierto === grupo ? '' : grupo)}
+                style={{ width: '100%', padding: '10px 14px', background: grupoAbierto === grupo ? '#F5F7FA' : 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#1A1A2E', fontFamily: 'inherit' }}>
+                <span>{grupo}</span>
+                <span style={{ color: '#9CA3AF', fontSize: '10px' }}>{grupoAbierto === grupo ? '▲' : '▼'}</span>
+              </button>
+              {grupoAbierto === grupo && (
+                <div style={{ borderTop: '1px solid #E8ECF0' }}>
+                  {preguntas.map((pregunta, i) => (
+                    <button key={i} onClick={() => enviarMensaje(pregunta)} disabled={cargando}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderBottom: i < preguntas.length - 1 ? '1px solid #F5F7FA' : 'none', fontSize: '11px', color: '#5F6B7A', cursor: cargando ? 'not-allowed' : 'pointer', fontFamily: 'inherit', lineHeight: '1.4' }}
+                      onMouseEnter={e => { if (!cargando) e.currentTarget.style.background = '#FFF5F3' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'none' }}>
+                      {pregunta}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
+
+          <div style={{ background: '#F0FDF4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#16A34A', marginBottom: '4px' }}>✨ Google Gemini 2.0 Flash</div>
+            <div style={{ fontSize: '10px', color: '#166534', lineHeight: '1.6', fontFamily: 'monospace' }}>
+              • 15 solicitudes/minuto gratis<br />
+              • 1,500 solicitudes/día gratis<br />
+              • aistudio.google.com
+            </div>
+          </div>
         </div>
       </div>
     </div>
