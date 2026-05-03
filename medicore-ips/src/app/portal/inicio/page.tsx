@@ -13,18 +13,18 @@ interface Paciente {
 }
 
 const MENU = [
-  { id: 'info', icon: '👤', label: 'Mi información', color: '#1D4ED8', bg: '#EFF6FF' },
-  { id: 'citas', icon: '📅', label: 'Citas médicas', color: '#16A34A', bg: '#F0FDF4' },
-  { id: 'historia', icon: '📋', label: 'Historia clínica', color: '#7C3AED', bg: '#F5F3FF' },
-  { id: 'incapacidades', icon: '🩹', label: 'Incapacidades', color: '#D97706', bg: '#FFFBEB' },
-  { id: 'resultados', icon: '🧪', label: 'Resultados', color: '#0D9488', bg: '#F0FDFA' },
-  { id: 'pagos', icon: '💳', label: 'Histórico pagos', color: '#DC2626', bg: '#FEF2F2' },
+  { id: 'info', icon: '👤', label: 'Mi información', color: '#2563EB' },
+  { id: 'citas', icon: '📅', label: 'Citas médicas', color: '#059669' },
+  { id: 'historia', icon: '📋', label: 'Historia clínica', color: '#7C3AED' },
+  { id: 'incapacidades', icon: '🩹', label: 'Incapacidades', color: '#D97706' },
+  { id: 'resultados', icon: '🧪', label: 'Resultados', color: '#0891B2' },
+  { id: 'pagos', icon: '💳', label: 'Pagos', color: '#64748B' },
 ]
 
 const ESPECIALIDADES = [
-  'MEDICINA GENERAL', 'CARDIOLOGÍA', 'PEDIATRÍA', 'GINECOLOGÍA',
-  'ORTOPEDIA', 'NEUROLOGÍA', 'DERMATOLOGÍA', 'ODONTOLOGÍA',
-  'NUTRICIÓN Y DIETÉTICA', 'PSICOLOGÍA', 'OFTALMOLOGÍA', 'UROLOGÍA'
+  'Medicina General', 'Cardiología', 'Pediatría', 'Ginecología',
+  'Ortopedia', 'Neurología', 'Dermatología', 'Odontología',
+  'Nutrición', 'Psicología', 'Oftalmología', 'Urología'
 ]
 
 function generarHoras(): string[] {
@@ -42,7 +42,7 @@ function generarHoras(): string[] {
 function diasDisponibles() {
   const dias = []
   const hoy = new Date()
-  for (let i = 1; i <= 14; i++) {
+  for (let i = 1; i <= 10; i++) {
     const d = new Date(hoy)
     d.setDate(hoy.getDate() + i)
     if (d.getDay() !== 0 && d.getDay() !== 6) {
@@ -88,91 +88,93 @@ export default function PortalInicio() {
   }
 
   const salir = () => { localStorage.removeItem('portal_paciente'); window.location.href = '/portal' }
-
-  const confirmarCita = async () => {
-    setLoadingCita(true)
-    await new Promise(r => setTimeout(r, 1200))
-    setConfirmada(true)
-    setLoadingCita(false)
-  }
+  const volver = () => { setSeccion(null); setPaso(1); setEspecialidad(''); setFechaSel(''); setHoraSel(''); setConfirmada(false) }
 
   if (!paciente) return null
 
-  const hdr = (titulo: string, icono: string) => (
-    <div style={{ background: '#fff', borderBottom: '1px solid #E8ECF0', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-      <button onClick={() => { setSeccion(null); setPaso(1); setEspecialidad(''); setFechaSel(''); setHoraSel(''); setConfirmada(false) }}
-        style={{ background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', color: '#5F6B7A' }}>
+  const s = { fontFamily: 'Inter,system-ui,sans-serif' }
+
+  const Hdr = ({ titulo, icono }: { titulo: string; icono: string }) => (
+    <div style={{ background: '#fff', borderBottom: '1px solid #F1F5F9', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 10 }}>
+      <button onClick={volver} style={{ background: 'none', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
         ← Volver
       </button>
-      <span style={{ fontSize: '18px' }}>{icono}</span>
-      <div style={{ fontSize: '15px', fontWeight: '800', color: '#1A1A2E' }}>{titulo}</div>
+      <div style={{ fontSize: '15px', fontWeight: '700', color: '#0F172A' }}>{titulo}</div>
     </div>
   )
 
+  // ── INFORMACIÓN ──
   if (seccion === 'info') return (
-    <div style={{ minHeight: '100vh', background: '#F5F7FA', maxWidth: '520px', margin: '0 auto', fontFamily: 'Inter,system-ui,sans-serif' }}>
-      {hdr('Mi Información', '👤')}
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#FFF5F3', border: '2px solid #ffd5cc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 14px' }}>👤</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1A1A2E', marginBottom: '4px' }}>{paciente.nombre} {paciente.apellido}</div>
-          <div style={{ fontSize: '13px', color: '#9CA3AF', fontFamily: 'monospace', marginBottom: '10px' }}>CC {paciente.documento}</div>
-          <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 12px', borderRadius: '20px', background: paciente.activo ? '#F0FDF4' : '#FEF2F2', color: paciente.activo ? '#16A34A' : '#DC2626' }}>
-            {paciente.activo ? '● AFILIACIÓN ACTIVA' : '● AFILIACIÓN INACTIVA'}
+    <div style={{ ...s, minHeight: '100vh', background: '#F8FAFC', maxWidth: '520px', margin: '0 auto' }}>
+      <Hdr titulo="Mi Información" icono="👤" />
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 14px' }}>👤</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '4px' }}>{paciente.nombre} {paciente.apellido}</div>
+          <div style={{ fontSize: '12px', color: '#94A3B8', fontFamily: 'monospace', marginBottom: '12px' }}>CC {paciente.documento}</div>
+          <span style={{ fontSize: '11px', fontWeight: '600', padding: '5px 14px', borderRadius: '20px', background: paciente.activo ? '#ECFDF5' : '#FEF2F2', color: paciente.activo ? '#059669' : '#DC2626', border: `1px solid ${paciente.activo ? '#A7F3D0' : '#FECACA'}` }}>
+            {paciente.activo ? '● Afiliación activa' : '● Afiliación inactiva'}
           </span>
         </div>
-        {[['🏥 EPS', paciente.eps || 'No registrada'], ['📱 Teléfono', paciente.telefono || 'No registrado'], ['🪪 Tipo afiliación', 'Cotizante'], ['📋 Régimen', 'Contributivo']].map(([l, v]) => (
-          <div key={l as string} style={{ background: '#fff', borderRadius: '12px', padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: '#5F6B7A' }}>{l as string}</span>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A2E' }}>{v as string}</span>
+        {[['EPS / Aseguradora', paciente.eps || 'No registrada'], ['Teléfono', paciente.telefono || 'No registrado'], ['Tipo de afiliación', 'Cotizante'], ['Régimen', 'Contributivo']].map(([l, v]) => (
+          <div key={l} style={{ background: '#fff', borderRadius: '12px', padding: '16px', border: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '13px', color: '#64748B' }}>{l}</span>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F172A' }}>{v}</span>
           </div>
         ))}
       </div>
     </div>
   )
 
+  // ── CITAS ──
   if (seccion === 'citas') return (
-    <div style={{ minHeight: '100vh', background: '#F5F7FA', maxWidth: '520px', margin: '0 auto', fontFamily: 'Inter,system-ui,sans-serif' }}>
-      {hdr('Citas Médicas', '📅')}
+    <div style={{ ...s, minHeight: '100vh', background: '#F8FAFC', maxWidth: '520px', margin: '0 auto' }}>
+      <Hdr titulo="Citas Médicas" icono="📅" />
       <div style={{ padding: '20px' }}>
         {confirmada ? (
-          <div style={{ background: '#fff', borderRadius: '20px', padding: '32px 24px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-            <div style={{ fontSize: '56px', marginBottom: '16px' }}>✅</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#16A34A', marginBottom: '8px' }}>¡Cita confirmada!</div>
-            <div style={{ fontSize: '13px', color: '#5F6B7A', lineHeight: '1.8', marginBottom: '20px' }}>
-              <strong>{especialidad}</strong><br />
-              {new Date(fechaSel + 'T00:00').toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}<br />
-              <strong>{horaSel}</strong> · IPS MediCore
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '40px 24px', textAlign: 'center', border: '1px solid #F1F5F9' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 16px' }}>✓</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '6px' }}>Cita confirmada</div>
+            <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.8', marginBottom: '24px' }}>
+              {especialidad}<br />
+              <strong style={{ color: '#0F172A' }}>{new Date(fechaSel + 'T00:00').toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long' })}</strong><br />
+              {horaSel} · MediCore IPS
             </div>
-            <div style={{ background: '#F0FDF4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#166534', marginBottom: '20px' }}>
-              📱 Recibirás un recordatorio 24h antes
+            <div style={{ background: '#F0FDF4', borderRadius: '10px', padding: '12px', fontSize: '12px', color: '#059669', marginBottom: '20px' }}>
+              Recibirás un recordatorio 24h antes
             </div>
             <button onClick={() => { setConfirmada(false); setPaso(1); setEspecialidad(''); setFechaSel(''); setHoraSel('') }}
-              style={{ background: '#C74634', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
+              style={{ background: '#2563EB', color: '#fff', border: 'none', borderRadius: '10px', padding: '13px 24px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
               Solicitar otra cita
             </button>
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            {/* Pasos */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', gap: '4px' }}>
               {['Especialidad', 'Fecha', 'Hora', 'Confirmar'].map((label, i) => (
-                <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: paso > i + 1 ? '#16A34A' : paso === i + 1 ? '#C74634' : '#E8ECF0', color: paso >= i + 1 ? '#fff' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px', fontSize: '12px', fontWeight: '700' }}>
-                    {paso > i + 1 ? '✓' : i + 1}
+                <div key={i} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: paso > i + 1 ? '#059669' : paso === i + 1 ? '#2563EB' : '#E2E8F0', color: paso >= i + 1 ? '#fff' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700' }}>
+                      {paso > i + 1 ? '✓' : i + 1}
+                    </div>
+                    <div style={{ fontSize: '9px', color: paso === i + 1 ? '#2563EB' : '#94A3B8', fontWeight: paso === i + 1 ? '700' : '400', whiteSpace: 'nowrap' }}>{label}</div>
                   </div>
-                  <div style={{ fontSize: '9px', color: paso === i + 1 ? '#C74634' : '#9CA3AF', fontWeight: paso === i + 1 ? '700' : '400' }}>{label}</div>
+                  {i < 3 && <div style={{ height: '1px', background: paso > i + 1 ? '#059669' : '#E2E8F0', flex: 0.5, marginBottom: '18px' }} />}
                 </div>
               ))}
             </div>
 
             {paso === 1 && (
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A2E', marginBottom: '14px' }}>Selecciona la especialidad</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #F1F5F9' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '14px' }}>Selecciona la especialidad</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {ESPECIALIDADES.map(esp => (
                     <button key={esp} onClick={() => { setEspecialidad(esp); setPaso(2) }}
-                      style={{ padding: '14px 16px', background: '#F5F7FA', border: '1.5px solid #E8ECF0', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '500', color: '#1A1A2E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      {esp} <span style={{ color: '#9CA3AF' }}>›</span>
+                      style={{ padding: '13px 16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: '500', color: '#0F172A', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563EB'; e.currentTarget.style.background = '#EFF6FF' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC' }}>
+                      {esp} <span style={{ color: '#CBD5E1', fontSize: '16px' }}>›</span>
                     </button>
                   ))}
                 </div>
@@ -180,66 +182,70 @@ export default function PortalInicio() {
             )}
 
             {paso === 2 && (
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontSize: '11px', color: '#C74634', fontWeight: '700', marginBottom: '4px' }}>{especialidad}</div>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A2E', marginBottom: '14px' }}>Selecciona la fecha</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #F1F5F9' }}>
+                <div style={{ fontSize: '11px', color: '#2563EB', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{especialidad}</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '14px' }}>Selecciona la fecha</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {diasDisponibles().map(dia => (
                     <button key={dia.fecha} onClick={() => { setFechaSel(dia.fecha); setPaso(3) }}
-                      style={{ padding: '14px 16px', background: '#F5F7FA', border: '1.5px solid #E8ECF0', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#1A1A2E', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'capitalize' }}>
-                      {dia.label} <span style={{ color: '#9CA3AF' }}>›</span>
+                      style={{ padding: '13px 16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#0F172A', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'capitalize' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563EB'; e.currentTarget.style.background = '#EFF6FF' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC' }}>
+                      {dia.label} <span style={{ color: '#CBD5E1', fontSize: '16px' }}>›</span>
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setPaso(1)} style={{ marginTop: '12px', width: '100%', padding: '10px', background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#5F6B7A' }}>← Cambiar especialidad</button>
+                <button onClick={() => setPaso(1)} style={{ marginTop: '12px', width: '100%', padding: '10px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#64748B' }}>← Cambiar especialidad</button>
               </div>
             )}
 
             {paso === 3 && (
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontSize: '11px', color: '#C74634', fontWeight: '700', marginBottom: '4px' }}>{especialidad}</div>
-                <div style={{ fontSize: '13px', color: '#5F6B7A', marginBottom: '14px', textTransform: 'capitalize' }}>
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #F1F5F9' }}>
+                <div style={{ fontSize: '11px', color: '#2563EB', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{especialidad}</div>
+                <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px', textTransform: 'capitalize' }}>
                   {new Date(fechaSel + 'T00:00').toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long' })}
                 </div>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A2E', marginBottom: '14px' }}>Horas disponibles</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '12px' }}>Horas disponibles</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
                   {generarHoras().map(hora => (
                     <button key={hora} onClick={() => { setHoraSel(hora); setPaso(4) }}
-                      style={{ padding: '12px 8px', background: '#F5F7FA', border: '1.5px solid #E8ECF0', borderRadius: '8px', cursor: 'pointer', fontFamily: 'monospace', fontSize: '13px', fontWeight: '700', color: '#1A1A2E' }}>
+                      style={{ padding: '11px 6px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', cursor: 'pointer', fontFamily: 'monospace', fontSize: '12px', fontWeight: '600', color: '#0F172A' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563EB'; e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.color = '#2563EB' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.color = '#0F172A' }}>
                       {hora}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setPaso(2)} style={{ marginTop: '12px', width: '100%', padding: '10px', background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#5F6B7A' }}>← Cambiar fecha</button>
+                <button onClick={() => setPaso(2)} style={{ marginTop: '12px', width: '100%', padding: '10px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#64748B' }}>← Cambiar fecha</button>
               </div>
             )}
 
             {paso === 4 && (
-              <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A2E', marginBottom: '20px' }}>Confirma tu cita</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '16px' }}>Resumen de tu cita</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                   {[
-                    ['👤 Paciente', `${paciente.nombre} ${paciente.apellido}`],
-                    ['🩺 Especialidad', especialidad],
-                    ['📅 Fecha', new Date(fechaSel + 'T00:00').toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })],
-                    ['🕐 Hora', horaSel],
-                    ['🏥 IPS', 'MediCore IPS'],
-                    ['🏥 EPS', paciente.eps || 'No registrada'],
+                    ['Paciente', `${paciente.nombre} ${paciente.apellido}`],
+                    ['Especialidad', especialidad],
+                    ['Fecha', new Date(fechaSel + 'T00:00').toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })],
+                    ['Hora', horaSel],
+                    ['IPS', 'MediCore IPS'],
+                    ['EPS', paciente.eps || 'No registrada'],
                   ].map(([l, v]) => (
-                    <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '12px 14px', background: '#F5F7FA', borderRadius: '8px', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', color: '#5F6B7A', flexShrink: 0 }}>{l as string}</span>
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#1A1A2E', textAlign: 'right', textTransform: 'capitalize' }}>{v as string}</span>
+                    <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '11px 14px', background: '#F8FAFC', borderRadius: '8px', gap: '10px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748B', flexShrink: 0 }}>{l}</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F172A', textAlign: 'right', textTransform: 'capitalize' }}>{v}</span>
                     </div>
                   ))}
                 </div>
-                <div style={{ background: '#FFFBEB', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: '#92400E', marginBottom: '16px' }}>
-                  ⚠️ Recuerda llegar 15 minutos antes con tu documento
+                <div style={{ background: '#FFFBEB', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#92400E', marginBottom: '16px' }}>
+                  Llega 15 minutos antes con tu documento de identidad
                 </div>
-                <button onClick={confirmarCita} disabled={loadingCita}
-                  style={{ width: '100%', padding: '14px', background: loadingCita ? '#9CA3AF' : '#C74634', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: loadingCita ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginBottom: '10px' }}>
-                  {loadingCita ? '⏳ Confirmando...' : '✅ Confirmar cita'}
+                <button onClick={async () => { setLoadingCita(true); await new Promise(r => setTimeout(r, 1200)); setConfirmada(true); setLoadingCita(false) }} disabled={loadingCita}
+                  style={{ width: '100%', padding: '14px', background: loadingCita ? '#94A3B8' : '#2563EB', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: loadingCita ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginBottom: '10px' }}>
+                  {loadingCita ? 'Confirmando...' : 'Confirmar cita'}
                 </button>
-                <button onClick={() => setPaso(3)} style={{ width: '100%', padding: '10px', background: '#F5F7FA', border: '1px solid #E8ECF0', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#5F6B7A' }}>← Cambiar hora</button>
+                <button onClick={() => setPaso(3)} style={{ width: '100%', padding: '10px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', color: '#64748B' }}>← Cambiar hora</button>
               </div>
             )}
           </>
@@ -248,34 +254,35 @@ export default function PortalInicio() {
     </div>
   )
 
+  // ── HISTORIA ──
   if (seccion === 'historia') return (
-    <div style={{ minHeight: '100vh', background: '#F5F7FA', maxWidth: '520px', margin: '0 auto', fontFamily: 'Inter,system-ui,sans-serif' }}>
-      {hdr('Mi Historia Clínica', '📋')}
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ ...s, minHeight: '100vh', background: '#F8FAFC', maxWidth: '520px', margin: '0 auto' }}>
+      <Hdr titulo="Mi Historia Clínica" icono="📋" />
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {loadingHC ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Cargando...</div>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#94A3B8', fontSize: '13px' }}>Cargando...</div>
         ) : hcs.length === 0 ? (
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '40px 24px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📋</div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A2E' }}>Sin consultas registradas</div>
-            <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '4px' }}>Tus consultas aparecerán aquí</div>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '48px 24px', textAlign: 'center', border: '1px solid #F1F5F9' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px', opacity: 0.5 }}>📋</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0F172A', marginBottom: '4px' }}>Sin consultas registradas</div>
+            <div style={{ fontSize: '13px', color: '#94A3B8' }}>Tus consultas aparecerán aquí</div>
           </div>
         ) : hcs.map(hc => {
           let dx = ''
           try { dx = JSON.parse(hc.diagnosticos)?.[0]?.descripcion || '' } catch {}
           return (
-            <div key={hc.id} style={{ background: '#fff', borderRadius: '14px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #C74634' }}>
+            <div key={hc.id} style={{ background: '#fff', borderRadius: '14px', padding: '16px', border: '1px solid #F1F5F9', borderLeft: '3px solid #2563EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#C74634', fontWeight: '700' }}>
+                <div style={{ fontSize: '12px', color: '#64748B', fontFamily: 'monospace' }}>
                   {new Date(hc.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: hc.firmada ? '#F0FDF4' : '#FEF2F2', color: hc.firmada ? '#16A34A' : '#DC2626' }}>
-                  {hc.firmada ? '✓ Firmada' : 'Sin firma'}
+                <span style={{ fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px', background: hc.firmada ? '#ECFDF5' : '#FEF2F2', color: hc.firmada ? '#059669' : '#DC2626' }}>
+                  {hc.firmada ? 'Firmada' : 'Sin firma'}
                 </span>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1A2E', marginBottom: '4px' }}>{hc.motivo || 'Consulta médica'}</div>
-              <div style={{ fontSize: '12px', color: '#5F6B7A', marginBottom: '4px' }}>{hc.medico}</div>
-              {dx && <div style={{ fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '4px', background: '#F5F3FF', color: '#7C3AED', display: 'inline-block', marginTop: '4px' }}>{dx}</div>}
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#0F172A', marginBottom: '4px' }}>{hc.motivo || 'Consulta médica'}</div>
+              <div style={{ fontSize: '12px', color: '#64748B', marginBottom: dx ? '8px' : '0' }}>{hc.medico}</div>
+              {dx && <div style={{ fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px', background: '#F5F3FF', color: '#7C3AED', display: 'inline-block' }}>{dx}</div>}
             </div>
           )
         })}
@@ -283,68 +290,84 @@ export default function PortalInicio() {
     </div>
   )
 
+  // ── OTRAS SECCIONES ──
   if (seccion) return (
-    <div style={{ minHeight: '100vh', background: '#F5F7FA', maxWidth: '520px', margin: '0 auto', fontFamily: 'Inter,system-ui,sans-serif' }}>
-      {hdr(MENU.find(m => m.id === seccion)?.label || '', MENU.find(m => m.id === seccion)?.icon || '')}
+    <div style={{ ...s, minHeight: '100vh', background: '#F8FAFC', maxWidth: '520px', margin: '0 auto' }}>
+      <Hdr titulo={MENU.find(m => m.id === seccion)?.label || ''} icono="" />
       <div style={{ padding: '20px' }}>
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '40px 24px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '14px' }}>{MENU.find(m => m.id === seccion)?.icon}</div>
-          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A2E', marginBottom: '6px' }}>{MENU.find(m => m.id === seccion)?.label}</div>
-          <div style={{ fontSize: '13px', color: '#9CA3AF' }}>Módulo disponible próximamente</div>
+        <div style={{ background: '#fff', borderRadius: '16px', padding: '48px 24px', textAlign: 'center', border: '1px solid #F1F5F9' }}>
+          <div style={{ fontSize: '40px', marginBottom: '14px', opacity: 0.4 }}>{MENU.find(m => m.id === seccion)?.icon}</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', color: '#0F172A', marginBottom: '6px' }}>{MENU.find(m => m.id === seccion)?.label}</div>
+          <div style={{ fontSize: '13px', color: '#94A3B8' }}>Disponible próximamente</div>
         </div>
       </div>
     </div>
   )
 
+  // ── HOME ──
   return (
-    <div style={{ minHeight: '100vh', background: '#F5F7FA', maxWidth: '520px', margin: '0 auto', fontFamily: 'Inter,system-ui,sans-serif' }}>
-      <div style={{ background: 'linear-gradient(135deg, #C74634 0%, #a33828 100%)', padding: '24px 20px 32px', color: '#fff' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🏥</div>
-            <span style={{ fontSize: '14px', fontWeight: '700' }}>MediCore IPS</span>
-          </div>
-          <button onClick={salir} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', padding: '6px 14px', color: '#fff', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Salir</button>
-        </div>
-        <div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '4px' }}>Bienvenido/a</div>
-          <div style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>{paciente.nombre} {paciente.apellido}</div>
-          <div style={{ fontSize: '13px', opacity: 0.85 }}>CC {paciente.documento}</div>
-          {paciente.eps && <div style={{ fontSize: '12px', opacity: 0.75, marginTop: '2px' }}>EPS: {paciente.eps}</div>}
-          <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '5px', background: paciente.activo ? 'rgba(16,185,84,0.25)' : 'rgba(239,68,68,0.25)', borderRadius: '20px', padding: '4px 10px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: paciente.activo ? '#4ade80' : '#f87171' }} />
-            <span style={{ fontSize: '11px', fontWeight: '700' }}>Afiliación: {paciente.activo ? 'ACTIVA' : 'INACTIVA'}</span>
+    <div style={{ ...s, minHeight: '100vh', background: '#F8FAFC', maxWidth: '520px', margin: '0 auto' }}>
+
+      {/* Header */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #F1F5F9', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '34px', height: '34px', background: '#EFF6FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🏥</div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A' }}>MediCore IPS</div>
+            <div style={{ fontSize: '10px', color: '#94A3B8' }}>Portal del Paciente</div>
           </div>
         </div>
+        <button onClick={salir} style={{ background: 'none', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 14px', color: '#64748B', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Salir</button>
       </div>
 
-      <div style={{ padding: '20px', marginTop: '-16px' }}>
-        <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', fontWeight: '700', color: '#9CA3AF', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Servicios disponibles</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+      {/* Bienvenida */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #F1F5F9', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>👤</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '2px' }}>Bienvenido/a</div>
+            <div style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', marginBottom: '2px' }}>{paciente.nombre} {paciente.apellido}</div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'monospace' }}>CC {paciente.documento} · {paciente.eps || 'Sin EPS'}</div>
+          </div>
+          <span style={{ fontSize: '10px', fontWeight: '600', padding: '4px 10px', borderRadius: '20px', background: paciente.activo ? '#ECFDF5' : '#FEF2F2', color: paciente.activo ? '#059669' : '#DC2626', border: `1px solid ${paciente.activo ? '#A7F3D0' : '#FECACA'}`, flexShrink: 0 }}>
+            {paciente.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        </div>
+
+        {/* Cita rápida */}
+        <div style={{ background: '#EFF6FF', borderRadius: '14px', padding: '16px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #DBEAFE' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#2563EB', fontWeight: '600', marginBottom: '2px' }}>Sin citas programadas</div>
+            <div style={{ fontSize: '12px', color: '#64748B' }}>Solicita tu próxima cita</div>
+          </div>
+          <button onClick={() => setSeccion('citas')}
+            style={{ background: '#2563EB', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+            Agendar →
+          </button>
+        </div>
+
+        {/* Servicios */}
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '600', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>Servicios</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {MENU.map(item => (
               <button key={item.id} onClick={() => setSeccion(item.id)}
-                style={{ background: item.bg, border: `1px solid ${item.color}20`, borderRadius: '12px', padding: '16px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <div style={{ fontSize: '28px' }}>{item.icon}</div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: item.color, textAlign: 'center', lineHeight: '1.3' }}>{item.label}</div>
+                style={{ background: '#fff', border: '1px solid #F1F5F9', borderRadius: '14px', padding: '18px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = item.color; e.currentTarget.style.background = '#F8FAFC' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#F1F5F9'; e.currentTarget.style.background = '#fff' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${item.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                  {item.icon}
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F172A', lineHeight: '1.3' }}>{item.label}</span>
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        <div style={{ background: 'linear-gradient(135deg, #1D4ED8, #3B82F6)', borderRadius: '16px', padding: '18px', color: '#fff', marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>📅 Próxima cita</div>
-          <div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>No tienes citas programadas</div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '14px' }}>Solicita una cita médica ahora</div>
-          <button onClick={() => setSeccion('citas')}
-            style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Solicitar cita →
-          </button>
-        </div>
-
-        <div style={{ textAlign: 'center', fontSize: '11px', color: '#9CA3AF', fontFamily: 'monospace', lineHeight: '1.8' }}>
-          🔒 Ley 1581/2012 · Res. 3100/2019<br />Tus datos están protegidos
-        </div>
+      {/* Footer */}
+      <div style={{ padding: '20px', textAlign: 'center', fontSize: '11px', color: '#CBD5E1', lineHeight: '1.8' }}>
+        Ley 1581/2012 · Res. 3100/2019 · ISO 27001
       </div>
     </div>
   )
