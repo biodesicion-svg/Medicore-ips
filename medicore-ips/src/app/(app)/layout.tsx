@@ -10,10 +10,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Header session={session} />
-      <Sidebar rol={session.user.rol} />
-      <main style={{ flex: 1, overflowY: 'auto', padding: '24px', background: '#F5F7FA' }}>
-        {children}
-      </main>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Sidebar rol={session.user.rol} />
+        <main style={{ flex: 1, overflowY: 'auto', padding: '24px', background: '#F5F7FA' }}>
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
