@@ -5,60 +5,89 @@ interface KpiCardProps {
   value: string | number
   delta?: string
   deltaType?: 'up' | 'down' | 'neutral'
-  icon: string
-  color: string
-  barColor: string
+  icon: React.ReactNode
+  accentColor: string
   delay?: number
 }
 
-export default function KpiCard({ label, value, delta, deltaType = 'neutral', icon, color, barColor }: KpiCardProps) {
+export default function KpiCard({ label, value, delta, deltaType = 'neutral', icon, accentColor, delay = 0 }: KpiCardProps) {
   const deltaColors = {
-    up: { bg: '#F0FDF4', text: '#16A34A' },
-    down: { bg: '#FEF2F2', text: '#DC2626' },
-    neutral: { bg: '#EFF6FF', text: '#1D4ED8' },
+    up:      { bg: 'var(--success-light)',  text: 'var(--success)',  symbol: '↑' },
+    down:    { bg: 'var(--danger-light)',   text: 'var(--danger)',   symbol: '↓' },
+    neutral: { bg: 'var(--primary-light)',  text: 'var(--primary)',  symbol: '→' },
   }
   const dc = deltaColors[deltaType]
 
   return (
-    <div
-      style={{
-        background: '#ffffff',
-        border: '1px solid #E8ECF0',
-        borderRadius: '10px',
-        padding: '18px 20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: 'default',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-      }}
-      onMouseEnter={(e) => {
+    <div style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-lg)',
+      padding: '20px',
+      boxShadow: 'var(--shadow-sm)',
+      position: 'relative',
+      overflow: 'hidden',
+      transition: 'box-shadow 0.2s, transform 0.2s',
+      cursor: 'default',
+    }}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-md)'
         e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
         e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'
-      }}
-    >
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '3px', background: barColor, borderRadius: '0 0 10px 10px' }} />
+      }}>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ fontSize: '10px', fontWeight: '600', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+      {/* Accent line top */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        height: '3px', background: accentColor,
+        borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+      }} />
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{
+          fontSize: '11px', fontWeight: '600',
+          color: 'var(--text-tertiary)',
+          textTransform: 'uppercase', letterSpacing: '0.8px',
+          lineHeight: 1.4,
+        }}>
           {label}
         </div>
-        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+        <div style={{
+          width: '36px', height: '36px',
+          borderRadius: 'var(--radius)',
+          background: accentColor + '15',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: accentColor, flexShrink: 0,
+        }}>
           {icon}
         </div>
       </div>
 
-      <div style={{ fontSize: '28px', fontWeight: '800', color: '#1A1A2E', letterSpacing: '-1px', marginBottom: '8px', lineHeight: 1 }}>
+      {/* Value */}
+      <div style={{
+        fontSize: '28px', fontWeight: '800',
+        color: 'var(--text-primary)',
+        letterSpacing: '-1px', lineHeight: 1,
+        marginBottom: '10px',
+        fontVariantNumeric: 'tabular-nums',
+      }}>
         {value}
       </div>
 
+      {/* Delta */}
       {delta && (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: dc.bg, color: dc.text, fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '4px' }}>
-          {deltaType === 'up' ? '↑' : deltaType === 'down' ? '↓' : '→'} {delta}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
+          background: dc.bg, color: dc.text,
+          fontSize: '11px', fontWeight: '600',
+          padding: '3px 8px', borderRadius: 'var(--radius-full)',
+        }}>
+          <span>{dc.symbol}</span>
+          <span>{delta}</span>
         </div>
       )}
     </div>
